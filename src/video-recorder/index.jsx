@@ -34,35 +34,44 @@ class VideoRecorder extends React.Component {
    * Starts video recording.
    */
   start() {
-    this.setState({ recordedChunks: [], recording: true });
+    if (this.state.recording) return;
 
-    this.timerInterval = setInterval(() => {
-      const { sec } = this.state;
-      this.setState({ sec: sec + 1 });
+    if (this.$webcamRef.current.stream) {
+      this.setState({ recordedChunks: [], recording: true });
 
-      this.emitEvent('onProgress', sec);
+      this.timerInterval = setInterval(() => {
+        const { sec } = this.state;
+        this.setState({ sec: sec + 1 });
 
-      if (this.props.timeLimit && sec == this.props.timeLimit) {
-        this.stop();
-      }
-    }, 1000);
+        this.emitEvent('onProgress', sec);
 
-    this.$mediaRecorderRef = new MediaRecorder(this.$webcamRef.current.stream, {
-      mimeType: 'video/webm',
-    });
-    this.$mediaRecorderRef.addEventListener(
-      'dataavailable',
-      this.addChunks.bind(this)
-    );
-    this.$mediaRecorderRef.start();
-    this.emitEvent('onStart');
+        if (this.props.timeLimit && sec === this.props.timeLimit) {
+          this.stop();
+        }
+      }, 1000);
+
+      this.$mediaRecorderRef = new MediaRecorder(
+        this.$webcamRef.current.stream,
+        {
+          mimeType: 'video/webm',
+        }
+      );
+      this.$mediaRecorderRef.addEventListener(
+        'dataavailable',
+        this.addChunks.bind(this)
+      );
+      this.$mediaRecorderRef.start();
+      this.emitEvent('onStart');
+    }
   }
 
   /**
    * Stops video recording.
    */
   stop() {
-    if (this.$mediaRecorderRef.state !== 'inactive') {
+    if (!this.state.recording) return;
+
+    if (this.$mediaRecorderRef && this.$mediaRecorderRef.state !== 'inactive') {
       this.$mediaRecorderRef.stop();
       clearInterval(this.timerInterval);
       this.setState({ sec: 0, recording: false });
